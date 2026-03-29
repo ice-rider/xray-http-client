@@ -1,7 +1,7 @@
-import { createSignal, For } from 'solid-js';
+import { createSignal, For, createEffect } from 'solid-js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query';
-import { getClients, createClient, getStats, logout } from '../api';
-import type { ClientStats, CreateClientResponse } from '../types';
+import { getClients, createClient, getStats, logout, getServerConfig } from '../api';
+import type { ClientStats, CreateClientResponse, ServerConfigResponse } from '../types';
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -10,6 +10,15 @@ export default function Dashboard() {
   const [newClientFlow, setNewClientFlow] = createSignal('xtls-rprx-vision');
   const [createdLink, setCreatedLink] = createSignal('');
   const [errorMessage, setErrorMessage] = createSignal<string>('');
+  const [serverConfig, setServerConfig] = createSignal<ServerConfigResponse | null>(null);
+
+  // Загрузка конфигурации сервера при монтировании
+  createEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      getServerConfig().then(setServerConfig).catch(console.error);
+    }
+  });
 
   const clientsQuery = useQuery(() => ({
     queryKey: ['clients'],
@@ -72,6 +81,29 @@ export default function Dashboard() {
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     alert('Ссылка скопирована в буфер обмена');
+  }
+
+  function generateVlessLink(clientId: string, flow: string, clientName: string): string {
+    const config = serverConfig();
+    if (!config) {
+      return `vless://${clientId}@${window.location.hostname}:443?encryption=none&flow=${flow}&security=reality&sni=www.apple.com&fp=firefox&pbk=LOADING&sid=&pqv=`;
+    }
+
+    const shortId = config.short_ids && config.short_ids.length > 0 ? config.short_ids[0] : '';
+    const serverIP = config.server_ip || window.location.hostname;
+    
+    const params = new URLSearchParams({
+      encryption: 'none',
+      flow: flow,
+      security: 'reality',
+      sni: config.sni || 'www.apple.com',
+      fp: config.fingerprint || 'firefox',
+      pbk: config.public_key,
+      sid: shortId,
+      pqv: config.mldsa65_public,
+    });
+
+    return `vless://${clientId}@${serverIP}:${config.port}?${params.toString()}#${encodeURIComponent(clientName)}`;
   }
 
   // Отображаем ошибку если есть
@@ -144,6 +176,7 @@ export default function Dashboard() {
                 <For each={clientsQuery.data?.clients}>
                   {(client) => {
                     const stats = getStatsForClient(client.email);
+                    const link = generateVlessLink(client.id, client.flow, client.email);
                     return (
                       <tr>
                         <td>{client.email}</td>
@@ -157,15 +190,16 @@ export default function Dashboard() {
                         <td>{stats ? formatBytes(stats.total) : '0 B'}</td>
                         <td>
                           <button
-                            onClick={() => {
-                              const link = `vless://${client.id}@${window.location.hostname}:443?encryption=none&flow=${client.flow}&security=reality&sni=www.apple.com&fp=firefox&pbk=YOUR_PUBLIC_KEY&sid=${client.id}`;
-                              copyToClipboard(link);
-                            }}
+                            onClick={() => copyToClipboard(link)}
                             class="btn btn-small"
                           >
                             Копировать ссылку
-                            <input style={{"user-select":"all"}} value={ `vless://${client.id}@${window.location.hostname}:443?encryption=none&flow=${client.flow}&security=reality&sni=www.apple.com&fp=firefox&pbk=YOUR_PUBLIC_KEY&sid=${client.id}`} ></input>
                           </button>
+                          <input
+                            style={{"user-select":"all", "width": "100%", "margin-top": "4px"}}
+                            value={link}
+                            readOnly
+                          />
                         </td>
                       </tr>
                     );

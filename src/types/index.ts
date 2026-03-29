@@ -42,3 +42,15 @@ export interface ClientsResponse {
 export interface StatsResponse {
   clients: ClientStats[];
 }
+
+export interface ServerConfig {
+  server_ip: string;
+  public_key: string;
+  mldsa65_public: string;
+  short_ids: string[];
+  port: number;
+  sni: string;
+  fingerprint: string;
+}
+
+export interface ServerConfigResponse extends ServerConfig {}

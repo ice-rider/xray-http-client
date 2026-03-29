@@ -5,6 +5,7 @@ import type {
   CreateClientResponse,
   ClientsResponse,
   StatsResponse,
+  ServerConfigResponse,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -79,6 +80,15 @@ export async function getStats(): Promise<StatsResponse> {
     headers: getHeaders(),
   });
   return handleResponse<StatsResponse>(response);
+}
+
+export async function getServerConfig(): Promise<ServerConfigResponse> {
+  console.log('getServerConfig');
+  const response = await fetch(`${API_BASE}/server-config`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+  return handleResponse<ServerConfigResponse>(response);
 }
 
 export function logout() {
