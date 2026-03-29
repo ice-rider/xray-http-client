@@ -164,6 +164,7 @@ export default function Dashboard() {
                             class="btn btn-small"
                           >
                             Копировать ссылку
+                            <input style={{"user-select":"all"}} value={ `vless://${client.id}@${window.location.hostname}:443?encryption=none&flow=${client.flow}&security=reality&sni=www.apple.com&fp=firefox&pbk=YOUR_PUBLIC_KEY&sid=${client.id}`} ></input>
                           </button>
                         </td>
                       </tr>
